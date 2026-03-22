@@ -510,7 +510,7 @@ When enabled, Marten appends a `pg_notify('mt_events_appended', '')` call alongs
 
 ::: warning
 **Considerations:**
-- Only works when the writer and the async daemon connect to the same PostgreSQL instance. LISTEN/NOTIFY does not propagate across streaming replicas (replicas replay WAL records but do not re-execute triggers), so this feature is not suitable for setups where the daemon reads from a replica
+- Only works when the application writing events and the application running the async daemon connect to the same PostgreSQL instance. PostgreSQL LISTEN/NOTIFY does not work across read replicas, so this feature is not suitable for setups where projections run against a replica
 - Requires one additional long-lived PostgreSQL connection per daemon node for the LISTEN channel
 - Not compatible with PgBouncer in transaction pooling mode, as LISTEN requires session-level state. See the [PgBouncer](#pgbouncer) section above for more details
 - Falls back to polling if the LISTEN connection drops; a reconnect happens on the next poll cycle
