@@ -499,6 +499,27 @@ using multi-tenancy through a database per tenant. On these spans will be these 
 There is also a counter metric called `marten.daemon.skipping` or `marten.[database name].daemon.skipping`
 that just emits and update every time that Marten has to "skip" stale events.
 
+## LISTEN/NOTIFY for Faster Event Processing
+
+By default, the async daemon polls PostgreSQL at configurable intervals (`FastPollingTime` of 250ms and `SlowPollingTime` of 1 second) to detect new events. This creates a latency floor between when events are appended and when projections process them. When near-instant projection updates are required, you can enable PostgreSQL LISTEN/NOTIFY to wake the daemon immediately when events are appended.
+
+When enabled, Marten appends a `pg_notify('mt_events_appended', '')` call alongside every event batch. The daemon holds a dedicated LISTEN connection on that channel and wakes the high water mark agent instantly upon notification. Polling remains as a fallback safety net in case notifications are missed.
+
+<!-- snippet: sample_enabling_listen_notify -->
+<!-- endSnippet -->
+
+::: warning
+**Considerations:**
+- Requires one additional long-lived PostgreSQL connection per daemon node for the LISTEN channel
+- Not compatible with PgBouncer in transaction pooling mode, as LISTEN requires session-level state. See the [PgBouncer](#pgbouncer) section above for more details
+- Falls back to polling if the LISTEN connection drops; a reconnect happens on the next poll cycle
+- The notification carries no payload — it is purely a "wake up and check" signal
+:::
+
+::: tip
+This feature is recommended when projection latency matters (sub-second event-to-read-model updates) and you are not using PgBouncer in transaction pooling mode.
+:::
+
 ## Advanced Skipping Tracking <Badge type="tip" text="8.6" />
 
 ::: info

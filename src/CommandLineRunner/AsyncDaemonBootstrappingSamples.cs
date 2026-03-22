@@ -127,6 +127,30 @@ public class AsyncDaemonBootstrappingSamples
 
     #endregion
 
+    #region sample_enabling_listen_notify
+
+    public static async Task EnableListenNotify()
+    {
+        var host = await Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddMarten(opts =>
+                    {
+                        opts.Connection("some connection string");
+
+                        // Use PostgreSQL LISTEN/NOTIFY to wake the async daemon
+                        // immediately when new events are appended
+                        opts.Events.UseListenNotifyForEventAppends = true;
+
+                        opts.Projections.Add<TripProjectionWithCustomName>(ProjectionLifecycle.Async);
+                    })
+                    .AddAsyncDaemon(DaemonMode.Solo);
+            })
+            .StartAsync();
+    }
+
+    #endregion
+
     #region sample_use_async_daemon_alone
 
     public static async Task UseAsyncDaemon(IDocumentStore store, CancellationToken cancellation)
